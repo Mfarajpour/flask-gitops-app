@@ -1,17 +1,20 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
 # Python
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 *.so
 .Python
-venv/
 env/
+venv/
 ENV/
-pip-log.txt
-pip-delete-this-directory.txt
-.pytest_cache/
+.venv
 
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -22,12 +25,29 @@ pip-delete-this-directory.txt
 .DS_Store
 Thumbs.db
 
-# Environment
-.env
-.env.local
-*.log
+# Docs
+*.md
+README.md
+LICENSE
 
-# Build
-build/
-dist/
-*.egg-info/
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Tests
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
