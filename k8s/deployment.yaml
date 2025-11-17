@@ -28,11 +28,11 @@ spec:
         version: v1.0.0
     spec:
       imagePullSecrets:              
-      - name: registry-secret       
+      - name: ghcr-secret       
       
       containers:
       - name: flask-app
-        image: 87.248.154.24:5050/flask-gitops-app:v1.0.0
+        image: ghcr.io/mfarajpour/flask-gitops-app:main-25c2a49
         imagePullPolicy: Always
 
         ports:
