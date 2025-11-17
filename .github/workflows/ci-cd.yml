@@ -3,6 +3,9 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'k8s/**'
+      - '**.md'
 
 env:
   REGISTRY: ghcr.io
@@ -55,15 +58,20 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image-tag: ${{ steps.short-sha.outputs.sha }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
       - name: Set lowercase repository name
-        id: repo
         run: |
           echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      
+      - name: Get short SHA
+        id: short-sha
+        run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -123,17 +131,23 @@ jobs:
       
       - name: Update deployment image tag
         run: |
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          sed -i "s|image: ghcr.io.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-$SHORT_SHA|g" k8s/deployment.yaml
-          echo "Updated deployment.yaml:"
-          grep "image:" k8s/deployment.yaml
+          SHORT_SHA="${{ needs.build-and-push.outputs.image-tag }}"
+          NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${SHORT_SHA}"
+          echo "Updating to: $NEW_IMAGE"
+          sed -i "s|image: ghcr.io/[^[:space:]]*|image: ${NEW_IMAGE}|g" k8s/deployment.yaml
+          echo "=== Updated deployment.yaml ==="
+          cat k8s/deployment.yaml
       
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add k8s/deployment.yaml
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: update image to main-$(echo ${{ github.sha }} | cut -c1-7)"
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]"
             git push
+            echo "Manifest updated successfully"
           fi
