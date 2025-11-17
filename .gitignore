@@ -31,9 +31,9 @@ README.md
 LICENSE
 
 # CI/CD
-.github/
-.gitlab-ci.yml
-Jenkinsfile
+#.github/
+#.gitlab-ci.yml
+#Jenkinsfile
 
 # Docker
 Dockerfile*
@@ -41,9 +41,10 @@ docker-compose*.yml
 .dockerignore
 
 # Tests
-tests/
-test_*.py
+#tests/
+#test_*.py
 *_test.py
+__pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
@@ -51,3 +52,10 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
