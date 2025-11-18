@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-app-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    environment: production
+    app: flask-gitops
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Mfarajpour/flask-gitops-app.git
+    targetRevision: main
+    path: k8s/overlays/production  
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flask-app-prod
+
+  syncPolicy:
+    # Production: Manual syn
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - ApplyOutOfSyncOnly=true
+
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        maxDuration: 1m
+        factor: 2
