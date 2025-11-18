@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flask-app-dev
+  labels:
+    environment: development
+    app: flask-gitops
