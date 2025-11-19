@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: flask-app
+        image: ghcr.io/mfarajpour/flask-gitops-app:v1.0.0-rc.1
