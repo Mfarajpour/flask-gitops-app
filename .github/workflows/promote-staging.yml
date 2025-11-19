@@ -1,0 +1,100 @@
+name: Promote to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: 'Source image tag (e.g., main-a3f2b1c)'
+        required: true
+      version:
+        description: 'Release candidate version (e.g., 1.2.3)'
+        required: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  retag-and-promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Set lowercase repository name
+        run: |
+          echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Pull source image
+        run: |
+          SOURCE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.source_tag }}"
+          echo " Pulling: $SOURCE_IMAGE"
+          docker pull $SOURCE_IMAGE
+
+      - name: Re-tag image for staging
+        run: |
+          SOURCE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.source_tag }}"
+          RC_TAG="v${{ github.event.inputs.version }}-rc.1"
+          NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${RC_TAG}"
+          
+          echo "Re-tagging: $SOURCE_IMAGE --> $NEW_IMAGE"
+          docker tag $SOURCE_IMAGE $NEW_IMAGE
+          docker push $NEW_IMAGE
+          
+          echo "RC_TAG=${RC_TAG}" >> $GITHUB_ENV
+          echo "NEW_IMAGE=${NEW_IMAGE}" >> $GITHUB_ENV
+
+      - name: Update staging overlay
+        run: |
+          echo "Updating staging manifest..."
+          
+          # Create or update image patch
+          cat > k8s/overlays/staging/patches/image-patch.yaml << YAML
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: flask-app
+        image: ${{ env.NEW_IMAGE }}
+YAML
+
+          # Add patch to kustomization if not exists
+          if ! grep -q "image-patch.yaml" k8s/overlays/staging/kustomization.yaml; then
+            echo "  - path: patches/image-patch.yaml" >> k8s/overlays/staging/kustomization.yaml
+          fi
+
+      - name: Create Git tag
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add k8s/overlays/staging/
+          git commit -m "release: promote ${{ env.RC_TAG }} to staging
+
+Source: ${{ github.event.inputs.source_tag }}
+Version: ${{ env.RC_TAG }}
+Image: ${{ env.NEW_IMAGE }}
+
+This release candidate is ready for QA testing in staging environment."
+          
+          git tag -a "${{ env.RC_TAG }}" -m "Release Candidate ${{ env.RC_TAG }}"
+          git push origin main
+          git push origin "${{ env.RC_TAG }}"
+          
+          echo "Promoted to staging as ${{ env.RC_TAG }}"
