@@ -8,6 +8,9 @@ metadata:
   labels:
     environment: production
     app: flask-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: "gitops-notifications"
 
 spec:
   project: default
@@ -15,22 +18,19 @@ spec:
   source:
     repoURL: https://github.com/Mfarajpour/flask-gitops-app.git
     targetRevision: main
-    path: k8s/overlays/production  
+    path: k8s/overlays/production
 
   destination:
     server: https://kubernetes.default.svc
     namespace: flask-app-prod
 
   syncPolicy:
-    # Production: Manual syn
-    # automated:
-    #   prune: true
-    #   selfHeal: true
-    
+    # ← Manual sync! automated حذف شده
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
       - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
 
     retry:
       limit: 3

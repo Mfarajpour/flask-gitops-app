@@ -8,6 +8,9 @@ metadata:
   labels:
     environment: staging
     app: flask-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: "gitops-notifications"
 
 spec:
   project: default
@@ -15,18 +18,14 @@ spec:
   source:
     repoURL: https://github.com/Mfarajpour/flask-gitops-app.git
     targetRevision: main
-    path: k8s/overlays/staging 
+    path: k8s/overlays/staging
 
   destination:
     server: https://kubernetes.default.svc
     namespace: flask-app-staging
 
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-      allowEmpty: false
-
+    # ← Manual sync! automated حذف شده
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
