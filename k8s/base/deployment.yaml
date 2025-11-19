@@ -31,7 +31,7 @@ spec:
 
       containers:
       - name: flask-app
-        image: ghcr.io/mfarajpour/flask-gitops-app:main-e40e0ff
+        image: ghcr.io/mfarajpour/flask-gitops-app:main-d3de3f6
         imagePullPolicy: Always
 
         ports:
