@@ -130,9 +130,8 @@ jobs:
           SHORT_SHA="${{ needs.build-and-push.outputs.image-tag }}"
           NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${SHORT_SHA}"
           
-          echo "New image for DEV: $NEW_IMAGE"
+          echo "📦 New image for DEV: $NEW_IMAGE"
           
-          # Update base deployment
           sed -i "s|image: ghcr.io/[^[:space:]]*|image: ${NEW_IMAGE}|g" k8s/base/deployment.yaml
           
           echo "=== Updated base/deployment.yaml ==="
@@ -148,17 +147,8 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update dev image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]
-
-Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ needs.build-and-push.outputs.image-tag }}
-
-Deployment:
-  - DEV: Auto-deployed by ArgoCD
-    STAGING: Awaiting manual promotion
-    PRODUCTION: Awaiting manual promotion
-
-To promote this image:
-./scripts/promote-to-staging.sh main-${{ needs.build-and-push.outputs.image-tag }}"
+            COMMIT_MSG="chore: update dev image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]"
+            git commit -m "${COMMIT_MSG}"
             git push
-            echo "** Manifest updated - ArgoCD will auto-deploy to DEV **"
+            echo "✅ Manifest updated - ArgoCD will auto-deploy to DEV"
           fi

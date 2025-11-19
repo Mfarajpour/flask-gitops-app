@@ -29,7 +29,6 @@ jobs:
 
       - name: Extract version from RC tag
         run: |
-          # v1.2.3-rc.1 → v1.2.3
           RELEASE_TAG=$(echo "${{ github.event.inputs.rc_tag }}" | sed 's/-rc\..*//')
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
 
@@ -43,7 +42,7 @@ jobs:
       - name: Pull RC image
         run: |
           RC_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.rc_tag }}"
-          echo "Pulling: $RC_IMAGE"
+          echo "📥 Pulling: $RC_IMAGE"
           docker pull $RC_IMAGE
 
       - name: Re-tag for production
@@ -52,9 +51,9 @@ jobs:
           PROD_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_TAG }}"
           STABLE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:stable"
           
-          echo "Re-tagging for production:"
-          echo "- $PROD_IMAGE"
-          echo "- $STABLE_IMAGE"
+          echo "🏷️  Re-tagging for production:"
+          echo "  → $PROD_IMAGE"
+          echo "  → $STABLE_IMAGE"
           
           docker tag $RC_IMAGE $PROD_IMAGE
           docker tag $RC_IMAGE $STABLE_IMAGE
@@ -64,43 +63,39 @@ jobs:
           
           echo "PROD_IMAGE=${PROD_IMAGE}" >> $GITHUB_ENV
 
-      - name: Update production overlay
+      - name: Create image patch file
         run: |
-          echo "Updating production manifest..."
+          mkdir -p k8s/overlays/production/patches
           
-          cat > k8s/overlays/production/patches/image-patch.yaml << YAML
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flask-app
-spec:
-  template:
-    spec:
-      containers:
-      - name: flask-app
-        image: ${{ env.PROD_IMAGE }}
-YAML
+          cat > k8s/overlays/production/patches/image-patch.yaml <<ENDOFFILE
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: flask-app
+          spec:
+            template:
+              spec:
+                containers:
+                - name: flask-app
+                  image: ${{ env.PROD_IMAGE }}
+          ENDOFFILE
 
+      - name: Update kustomization if needed
+        run: |
           if ! grep -q "image-patch.yaml" k8s/overlays/production/kustomization.yaml; then
             echo "  - path: patches/image-patch.yaml" >> k8s/overlays/production/kustomization.yaml
           fi
 
-      - name: Create release
+      - name: Commit and create release tag
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
           git add k8s/overlays/production/
-          git commit -m "release: deploy ${{ env.RELEASE_TAG }} to production
-
-Promoted from: ${{ github.event.inputs.rc_tag }}
-Version: ${{ env.RELEASE_TAG }}
-Image: ${{ env.PROD_IMAGE }}
-
-This release has been tested in staging and is ready for production."
+          git commit -m "release: deploy ${{ env.RELEASE_TAG }} to production"
           
           git tag -a "${{ env.RELEASE_TAG }}" -m "Release ${{ env.RELEASE_TAG }}"
           git push origin main
           git push origin "${{ env.RELEASE_TAG }}"
           
-          echo "Deployed to production as ${{ env.RELEASE_TAG }}"
+          echo "🎉 Deployed to production as ${{ env.RELEASE_TAG }}"

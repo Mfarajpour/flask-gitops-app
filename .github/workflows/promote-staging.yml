@@ -40,7 +40,7 @@ jobs:
       - name: Pull source image
         run: |
           SOURCE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.source_tag }}"
-          echo " Pulling: $SOURCE_IMAGE"
+          echo "📥 Pulling: $SOURCE_IMAGE"
           docker pull $SOURCE_IMAGE
 
       - name: Re-tag image for staging
@@ -49,52 +49,46 @@ jobs:
           RC_TAG="v${{ github.event.inputs.version }}-rc.1"
           NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${RC_TAG}"
           
-          echo "Re-tagging: $SOURCE_IMAGE --> $NEW_IMAGE"
+          echo "🏷️  Re-tagging: $SOURCE_IMAGE → $NEW_IMAGE"
           docker tag $SOURCE_IMAGE $NEW_IMAGE
           docker push $NEW_IMAGE
           
           echo "RC_TAG=${RC_TAG}" >> $GITHUB_ENV
           echo "NEW_IMAGE=${NEW_IMAGE}" >> $GITHUB_ENV
 
-      - name: Update staging overlay
+      - name: Create image patch file
         run: |
-          echo "Updating staging manifest..."
+          mkdir -p k8s/overlays/staging/patches
           
-          # Create or update image patch
-          cat > k8s/overlays/staging/patches/image-patch.yaml << YAML
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flask-app
-spec:
-  template:
-    spec:
-      containers:
-      - name: flask-app
-        image: ${{ env.NEW_IMAGE }}
-YAML
+          cat > k8s/overlays/staging/patches/image-patch.yaml <<ENDOFFILE
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: flask-app
+          spec:
+            template:
+              spec:
+                containers:
+                - name: flask-app
+                  image: ${{ env.NEW_IMAGE }}
+          ENDOFFILE
 
-          # Add patch to kustomization if not exists
+      - name: Update kustomization if needed
+        run: |
           if ! grep -q "image-patch.yaml" k8s/overlays/staging/kustomization.yaml; then
             echo "  - path: patches/image-patch.yaml" >> k8s/overlays/staging/kustomization.yaml
           fi
 
-      - name: Create Git tag
+      - name: Commit and create tag
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
           git add k8s/overlays/staging/
-          git commit -m "release: promote ${{ env.RC_TAG }} to staging
-
-Source: ${{ github.event.inputs.source_tag }}
-Version: ${{ env.RC_TAG }}
-Image: ${{ env.NEW_IMAGE }}
-
-This release candidate is ready for QA testing in staging environment."
+          git commit -m "release: promote ${{ env.RC_TAG }} to staging"
           
           git tag -a "${{ env.RC_TAG }}" -m "Release Candidate ${{ env.RC_TAG }}"
           git push origin main
           git push origin "${{ env.RC_TAG }}"
           
-          echo "Promoted to staging as ${{ env.RC_TAG }}"
+          echo "✅ Promoted to staging as ${{ env.RC_TAG }}"
