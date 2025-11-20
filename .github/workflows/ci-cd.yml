@@ -112,42 +112,47 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
-  update-manifest:
-    name: Update Kubernetes Manifests
+  update-dev-manifest:
+    name: Update Dev Environment
     runs-on: ubuntu-latest
     needs: build-and-push
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT_TOKEN }}
-      
+
       - name: Set lowercase repository name
         run: |
           echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-      
-      - name: Update deployment image tag
+
+      - name: Update dev overlay image
         run: |
           SHORT_SHA="${{ needs.build-and-push.outputs.image-tag }}"
           NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${SHORT_SHA}"
-          echo "Updating to: $NEW_IMAGE"
-          sed -i "s|image: ghcr.io/[^[:space:]]*|image: ${NEW_IMAGE}|g" k8s/deployment.yaml
-          echo "=== Updated deployment.yaml ==="
-          cat k8s/deployment.yaml
-      
+
+          echo "New image for DEV: $NEW_IMAGE"
+
+          sed -i "s|image: ghcr.io/[^[:space:]]*|image: ${NEW_IMAGE}|g" k8s/overlays/dev/patches/image-patch.yaml
+
+          echo "=== Updated dev/patches/image-patch.yaml ==="
+          grep "image:" k8s/overlays/dev/patches/image-patch.yaml
+
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add k8s/deployment.yaml
-          
+
+          git add k8s/overlays/dev/patches/image-patch.yaml
+
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]"
+            COMMIT_MSG="chore: update dev image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]"
+            git commit -m "${COMMIT_MSG}"
             git push
-            echo "Manifest updated successfully"
+            echo "Manifest updated - ArgoCD will auto-deploy to DEV"
           fi

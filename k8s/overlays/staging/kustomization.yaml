@@ -14,6 +14,10 @@ patches:
   - path: patches/deployment-patch.yaml
   - path: patches/service-patch.yaml
 
+images:
+  - name: ghcr.io/mfarajpour/flask-gitops-app
+    newTag: main-d3de3f6
+
 labels:
   - pairs:
       environment: staging
