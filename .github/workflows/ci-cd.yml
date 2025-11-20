@@ -111,7 +111,6 @@ jobs:
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
-
   update-dev-manifest:
     name: Update Dev Environment
     runs-on: ubuntu-latest
@@ -129,30 +128,35 @@ jobs:
         run: |
           echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Update dev overlay image
+      - name: Install Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Update dev image tag
         run: |
           SHORT_SHA="${{ needs.build-and-push.outputs.image-tag }}"
-          NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${SHORT_SHA}"
-
-          echo "New image for DEV: $NEW_IMAGE"
-
-          sed -i "s|image: ghcr.io/[^[:space:]]*|image: ${NEW_IMAGE}|g" k8s/overlays/dev/patches/image-patch.yaml
-
-          echo "=== Updated dev/patches/image-patch.yaml ==="
-          grep "image:" k8s/overlays/dev/patches/image-patch.yaml
+          
+          echo "Updating DEV to main-${SHORT_SHA}"
+          
+          cd k8s/overlays/dev
+          kustomize edit set image ghcr.io/${{ env.IMAGE_NAME }}:main-${SHORT_SHA}
+          
+          echo "Updated kustomization.yaml:"
+          cat kustomization.yaml
 
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add k8s/overlays/dev/patches/image-patch.yaml
+          git add k8s/overlays/dev/kustomization.yaml
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            COMMIT_MSG="chore: update dev image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]"
-            git commit -m "${COMMIT_MSG}"
+            git commit -m "chore: update dev image to main-${{ needs.build-and-push.outputs.image-tag }} [skip ci]"
             git push
             echo "Manifest updated - ArgoCD will auto-deploy to DEV"
           fi
