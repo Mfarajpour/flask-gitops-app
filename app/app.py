@@ -118,6 +118,6 @@ def internal_error(error):
 
 if __name__ == '__main__':
     # Run the Flask app
-    # In production, use gunicorn or uwsgi
+    ## In production, use gunicorn or uwsgi
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
