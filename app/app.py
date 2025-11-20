@@ -11,7 +11,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Configuration from environment variables
-APP_VERSION = os.getenv('APP_VERSION', '1.0.0')
+APP_VERSION = os.getenv('APP_VERSION', '1.1.0')
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
 @app.route('/')
