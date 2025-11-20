@@ -2,23 +2,23 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../base
-  - namespace.yaml
-  - configmap.yaml
+- ../../base
+- namespace.yaml
+- configmap.yaml
 
 namespace: flask-app-dev
 
 namePrefix: dev-
 
 patches:
-  - path: patches/deployment-patch.yaml
-  - path: patches/service-patch.yaml
+- path: patches/deployment-patch.yaml
+- path: patches/service-patch.yaml
 
 images:
-  - name: ghcr.io/mfarajpour/flask-gitops-app
-    newTag: main-6459697
+- name: ghcr.io/mfarajpour/flask-gitops-app
+  newTag: main-1634cde
 
 labels:
-  - pairs:
-      environment: development
-      tier: dev
+- pairs:
+    environment: development
+    tier: dev
