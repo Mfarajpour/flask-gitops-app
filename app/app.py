@@ -23,7 +23,8 @@ def home():
         'message': 'Welcome to Flask GitOps App!',
         'version': APP_VERSION,
         'environment': ENVIRONMENT,
-        'status': 'running'
+        'status': 'running',
+        'extra':'HELLO'
     })
 
 @app.route('/health')
