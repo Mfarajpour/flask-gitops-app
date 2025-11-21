@@ -16,7 +16,7 @@ patches:
 
 images:
 - name: ghcr.io/mfarajpour/flask-gitops-app
-  newTag: main-d5247cb
+  newTag: main-115c2d1
 
 labels:
 - pairs:
