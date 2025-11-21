@@ -24,7 +24,7 @@ def home():
         'version': APP_VERSION,
         'environment': ENVIRONMENT,
         'status': 'running',
-        'extra':'HELLO'
+        'extra':'HELLO mohsen'
     })
 
 @app.route('/health')
