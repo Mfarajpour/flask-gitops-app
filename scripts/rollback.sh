@@ -18,7 +18,6 @@ IMAGE="${REGISTRY}/${REPO}"
 
 command -v kustomize >/dev/null 2>&1 || {
     echo "Error: kustomize is not installed"
-    echo "Install: curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash"
     exit 1
 }
 
@@ -56,22 +55,20 @@ cd ${OVERLAY_PATH}
 kustomize edit set image ${IMAGE}:${TAG}
 cd ../../..
 
-echo "Updated kustomization.yaml:"
-grep -A 2 "images:" ${OVERLAY_PATH}/kustomization.yaml
-
 echo "Committing rollback..."
 git add ${OVERLAY_PATH}/kustomization.yaml
 git commit -m "rollback: revert ${ENV} to ${TAG}"
 
+echo "Pushing to remote..."
+git push origin main
+
 echo ""
-echo "Rollback ready! Now run:"
-echo "  git push origin main"
+echo "Rollback pushed!"
 
 if [ "$ENV" = "production" ]; then
-    echo ""
-    echo "Then sync ArgoCD:"
+    echo "Now sync ArgoCD:"
     echo "  argocd app sync flask-app-prod"
 else
-    echo ""
-    echo "ArgoCD will auto-sync staging"
+    echo "ArgoCD will auto-sync in ~3 minutes"
+    echo "Or manually: argocd app get flask-app-staging --refresh"
 fi

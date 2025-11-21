@@ -17,7 +17,6 @@ IMAGE="${REGISTRY}/${REPO}"
 
 command -v kustomize >/dev/null 2>&1 || {
     echo "Error: kustomize is not installed"
-    echo "Install: curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash"
     exit 1
 }
 
@@ -48,9 +47,6 @@ cd k8s/overlays/production
 kustomize edit set image ${IMAGE}:${RELEASE_TAG}
 cd ../../..
 
-echo "Updated kustomization.yaml:"
-grep -A 2 "images:" k8s/overlays/production/kustomization.yaml
-
 echo "Committing changes..."
 git add k8s/overlays/production/kustomization.yaml
 git commit -m "release: deploy ${RELEASE_TAG} to production
@@ -60,10 +56,10 @@ Image: ${IMAGE}:${RELEASE_TAG}"
 
 git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
 
+echo "Pushing to remote..."
+git push origin main
+git push origin ${RELEASE_TAG}
+
 echo ""
-echo "Ready for production! Now run:"
-echo "  git push origin main"
-echo "  git push origin ${RELEASE_TAG}"
-echo ""
-echo "Deploy to production:"
+echo "Done! Now manually sync ArgoCD:"
 echo "  argocd app sync flask-app-prod"

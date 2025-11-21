@@ -18,7 +18,6 @@ IMAGE="${REGISTRY}/${REPO}"
 
 command -v kustomize >/dev/null 2>&1 || {
     echo "Error: kustomize is not installed"
-    echo "Install: curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash"
     exit 1
 }
 
@@ -41,9 +40,6 @@ cd k8s/overlays/staging
 kustomize edit set image ${IMAGE}:${RC_TAG}
 cd ../../..
 
-echo "Updated kustomization.yaml:"
-grep -A 2 "images:" k8s/overlays/staging/kustomization.yaml
-
 echo "Committing changes..."
 git add k8s/overlays/staging/kustomization.yaml
 git commit -m "release: promote ${RC_TAG} to staging
@@ -53,9 +49,11 @@ Image: ${IMAGE}:${RC_TAG}"
 
 git tag -a "${RC_TAG}" -m "Release Candidate ${RC_TAG}"
 
+echo "Pushing to remote..."
+git push origin main
+git push origin ${RC_TAG}
+
 echo ""
-echo "Done! Now run:"
-echo "  git push origin main"
-echo "  git push origin ${RC_TAG}"
-echo ""
-echo "ArgoCD will auto-sync staging environment"
+echo "Done! ArgoCD will auto-sync in ~3 minutes"
+echo "Or manually refresh:"
+echo "  argocd app get flask-app-staging --refresh"
