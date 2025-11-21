@@ -16,7 +16,7 @@ patches:
 
 images:
 - name: ghcr.io/mfarajpour/flask-gitops-app
-  newTag: v2.3.0
+  newTag: v2.4.0
 
 labels:
 - pairs:
